@@ -7,10 +7,9 @@ void TaskSerie( void *pvParameters );
 
 const int Trig = 11;
 const int Echo = 12;
-const int Led = 3;
+const int Led = 2;
 const int Rs485 = 5;
-static String Id="1";
-static String com ="0";
+String Id="1";
 int MuestraTiempo = 100;
 static boolean control=false;
 static boolean ocupado=false;
@@ -27,14 +26,16 @@ void setup() {
   pinMode(Echo,INPUT);
   pinMode(Led, OUTPUT);
   pinMode(Rs485, OUTPUT);
-  digitalWrite(Led, LOW);
+  digitalWrite(Led, HIGH);
+  delay(100);
+  digitalWrite(Led,LOW );
   digitalWrite(Rs485, LOW);
   inputString.reserve(50);
 
   xTaskCreate(TaskSerie,(const portCHAR *)"Serie"
     ,  128  // Stack size
     ,  NULL
-    ,  5  // priority
+    ,  1  // priority
     ,  NULL );
   
   xTaskCreate(TaskBlink,(const portCHAR *)"Blink"
@@ -49,37 +50,35 @@ void setup() {
     ,  1 // priority
     ,  NULL );
 
-  Enviar("Ready");
+  EnviarOK();
 }
 
 void loop() {
 }
 
-void comandos(){
- 
-  Serial.print("Id: ");Serial.println(Id);
-  Serial.print("com: ");Serial.println(com);
-  if(Id.equals(com)){
-    Enviar("OK");
-  }
-}
 
 void TaskSerie(void *pvParameters){
  while(true){
   if(Serial.available()>0) {
     char inChar = (char)Serial.read();
-    inputString += inChar;
-    
+    if ((inChar != '\r')) {
+       inputString += inChar;
+    }
     if (inChar == '\r') {
+      if(Id.equals(inputString)){
       
+       if(digitalRead(Led)){
+        EnviarOcupado();
+        }else{
+          EnviarLibre();}
+      }
       stringComplete = true;
-      com=inputString;
-      Serial.println(inputString);
+    
     }
   }
   
   if (stringComplete){
-       comandos();
+     
        inputString = "";
        stringComplete = false;
    }
@@ -133,14 +132,38 @@ void TaskBlink(void *pvParameters){
  }
 }
 
-void Enviar(String dato){
+void EnviarOK(){
   
    digitalWrite(Rs485,HIGH);
    delay(5);
-   Serial.println(dato);
+   Serial.println(Id+";READY");
    delay(30);
    digitalWrite(Rs485,LOW);
   
   
   }
+
+
+void EnviarOcupado(){
+  
+   digitalWrite(Rs485,HIGH);
+   delay(5);
+   Serial.println("BUSY");
+   delay(30);
+   digitalWrite(Rs485,LOW);
+  
+  
+  }
+
+void EnviarLibre(){
+  
+   digitalWrite(Rs485,HIGH);
+   delay(5);
+   Serial.println("FREE");
+   delay(30);
+   digitalWrite(Rs485,LOW);
+  
+  
+  }
+
 
